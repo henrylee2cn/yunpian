@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // SMS 是短信发送客户端
@@ -64,6 +65,52 @@ func (sms *SMS) SingleSend(input *SingleSendRequest) (*SingleSendResponse, error
 
 	var result SingleSendResponse
 	err := sms.sendRequest(http.MethodPost, "/v2/sms/single_send.json", input, &result)
+	return &result, err
+}
+
+type (
+	// RegCompleteRequest 注册成功上报的参数
+	RegCompleteRequest struct {
+		Mobile string
+		Time   time.Time
+	}
+	regCompleteRequest struct {
+		Mobile string `url:"mobile,omitempty"`
+		Time   string `url:"time,omitempty"` // 2017-03-15 18:30:00
+	}
+)
+
+// Verify 用于验证请求参数的正确性
+func (r *regCompleteRequest) Verify() error {
+	if len(r.Mobile) == 0 {
+		return errors.New("Miss param: mobile")
+	}
+	return nil
+}
+
+// RegCompleteResponse 注册成功上报的响应
+type RegCompleteResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// IsSuccess 用于验证短信发送是否成功
+func (resp *RegCompleteResponse) IsSuccess() bool {
+	return resp.Code == 0
+}
+
+// RegComplete 注册成功上报
+func (sms *SMS) RegComplete(input *RegCompleteRequest) (*RegCompleteResponse, error) {
+	var realInput = new(regCompleteRequest)
+	if input != nil {
+		realInput.Mobile = input.Mobile
+		if !input.Time.IsZero() {
+			realInput.Time = input.Time.Format("2006-01-02 15:04:05")
+		}
+	}
+
+	var result RegCompleteResponse
+	err := sms.sendRequest(http.MethodPost, "v2/sms/reg_complete.json", realInput, &result)
 	return &result, err
 }
 
